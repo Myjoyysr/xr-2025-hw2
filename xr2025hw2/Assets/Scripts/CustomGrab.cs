@@ -17,13 +17,13 @@ public class CustomGrab : MonoBehaviour
     private Quaternion lastRotation;
     //private Vector3 lastLocalPosition;
 
-    public InputActionReference doubleTheRotationAction;
-    private bool doubleTheRotation;
+    public InputActionReference doubleRotationAction;
+    private bool doubleRotation;
 
     private void Start()
     {
         action.action.Enable();
-        doubleTheRotationAction.action.Enable();
+        doubleRotationAction.action.Enable();
 
         // Find the other hand
         foreach(CustomGrab c in transform.parent.GetComponentsInChildren<CustomGrab>())
@@ -31,14 +31,13 @@ public class CustomGrab : MonoBehaviour
             if (c != this)
                 otherHand = c;
         }
+
     }
     
     void Update()
     {
         grabbing = action.action.IsPressed();
-        doubleTheRotation = doubleTheRotationAction.action.IsPressed();
-
-
+        doubleRotation = doubleRotationAction.action.IsPressed();
 
         if (grabbing)
         {
@@ -47,9 +46,8 @@ public class CustomGrab : MonoBehaviour
             // Grab nearby object or the object in the other hand
             if (!grabbedObject){
                 grabbedObject = nearObjects.Count > 0 ? nearObjects[0] : otherHand.grabbedObject;
-
             }
-
+            
             if (grabbedObject)
             {
                 // Change these to add the delta position and rotation instead
@@ -58,39 +56,43 @@ public class CustomGrab : MonoBehaviour
                 //grabbedObject.rotation = transform.rotation;
                 // 1. calculate the deltas:
                 Vector3 deltaPosition = transform.position - lastPosition;
-                if (otherHand.grabbedObject){
-                    deltaPosition = deltaPosition * 0.5f;
-                }
-
                 Quaternion deltaRotation = transform.rotation * Quaternion.Inverse(lastRotation);
 
-                if (otherHand.grabbedObject){
-                    deltaRotation = Quaternion.Slerp(Quaternion.identity, deltaRotation, 0.5f);
+                if (otherHand.grabbedObject==grabbedObject && otherHand.grabbing){
+                    //rotation
+                    //deltaRotation = deltaRotation * Quaternion.Inverse(otherHand.lastRotation) * otherHand.transform.rotation;
+                    //deltaRotation = Quaternion.Slerp((Quaternion.Inverse(otherHand.lastRotation) * otherHand.transform.rotation), deltaRotation, 0.5f);
+
+                    Vector3 deltaPositionBoth = deltaPosition + (otherHand.transform.position -  otherHand.lastPosition);// * 0.5f;
+                    grabbedObject.position = grabbedObject.position + deltaPositionBoth * 0.5f;
+
+                }else{
+                    grabbedObject.position = grabbedObject.position+ deltaPosition;
                 }
+      
+                //grabbedObject.position = grabbedObject.position+ deltaPosition;
 
-                Vector3 pivotPoint = transform.position;
-                Vector3 positionOffset = grabbedObject.position - pivotPoint;
-
-                Vector3 offset = deltaRotation * positionOffset;
-                grabbedObject.position = pivotPoint + offset;
-
-                if (!doubleTheRotation){
+                if (!doubleRotation){
                     // 2. calculate and apply rotation
-
                     grabbedObject.rotation = deltaRotation * grabbedObject.rotation;
 
                 }else{
 
                     // 2. calculate and apply rotation (double angle)
-
                     deltaRotation.ToAngleAxis(out float angle, out Vector3 axis);
                     grabbedObject.rotation = Quaternion.AngleAxis(angle * 2.0f, axis) * grabbedObject.rotation;
-
                 }
  
-                // 2. calculate and apply new position
-                grabbedObject.position = grabbedObject.position + deltaPosition;
+                // 3. calculate and apply new position related to the the controller
+                Vector3 controllerVector = grabbedObject.position - transform.position;
+                controllerVector = deltaRotation * controllerVector;
 
+                if (otherHand.grabbedObject == grabbedObject && otherHand.grabbing){
+                    grabbedObject.position = transform.position + (controllerVector);
+                    
+                }else{
+                    grabbedObject.position = transform.position + controllerVector;
+                }
 
             }
         }

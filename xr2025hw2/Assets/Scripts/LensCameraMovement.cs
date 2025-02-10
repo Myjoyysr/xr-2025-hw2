@@ -12,9 +12,7 @@ public class LensCameraMovement : MonoBehaviour
 
         Vector3 lookDir = lens.TransformPoint(new Vector3(-mainCameraPosition.x,-mainCameraPosition.y,-mainCameraPosition.z));
 
-        transform.position = lens.position;
         transform.LookAt(lookDir, lens.up);
 
-        
     }
 }
